@@ -1,0 +1,61 @@
+---
+import { siteConfig } from "../config";
+import { url } from "../utils/url-utils";
+---
+
+<a href={url("/")} class="flex items-center" aria-label="Go to home page">
+  <div class="logo-container">
+    <!-- Light mode logo -->
+    <img 
+      src={siteConfig.logo?.light || "/logo-light.svg"} 
+      alt={`${siteConfig.title} logo`}
+      class="logo logo-light h-8"
+      width="auto"
+      height="32"
+    />
+    
+    <!-- Dark mode logo -->
+    <img 
+      src={siteConfig.logo?.dark || "/logo-dark.svg"} 
+      alt={`${siteConfig.title} logo`}
+      class="logo logo-dark h-8"
+      width="auto" 
+      height="32"
+    />
+  </div>
+  <span class="ml-3 text-lg font-medium">{siteConfig.title}</span>
+</a>
+
+<style>
+  .logo-container {
+    position: relative;
+    height: 2rem;
+    width: auto;
+    display: flex;
+    align-items: center;
+  }
+
+  .logo {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .logo-light {
+    opacity: 1;
+  }
+
+  .logo-dark {
+    opacity: 0;
+  }
+
+  /* In dark mode, show dark logo and hide light logo */
+  :global(.dark) .logo-light {
+    opacity: 0;
+  }
+
+  :global(.dark) .logo-dark {
+    opacity: 1;
+  }
+</style>

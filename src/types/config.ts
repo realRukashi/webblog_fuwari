@@ -26,6 +26,10 @@ export type SiteConfig = {
 	};
 
 	favicon: Favicon[];
+	logo?: {
+		light: string;
+		dark: string;
+	};
 };
 
 export type Favicon = {

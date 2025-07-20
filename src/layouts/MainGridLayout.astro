@@ -22,6 +22,8 @@ interface Props {
 	lang?: string;
 	setOGTypeArticle?: boolean;
 	headings?: MarkdownHeading[];
+	class?: string;
+	isBlogPost?: boolean;
 }
 
 const {
@@ -31,7 +33,10 @@ const {
 	lang,
 	setOGTypeArticle,
 	headings = [],
+	class: className,
+	isBlogPost = false,
 } = Astro.props;
+
 const hasBannerCredit =
 	siteConfig.banner.enable && siteConfig.banner.credit.enable;
 const hasBannerLink = !!siteConfig.banner.credit.url;
@@ -39,7 +44,23 @@ const hasBannerLink = !!siteConfig.banner.credit.url;
 const mainPanelTop = siteConfig.banner.enable
 	? `calc(${BANNER_HEIGHT}vh - ${MAIN_PANEL_OVERLAPS_BANNER_HEIGHT}rem)`
 	: "5.5rem";
+
+// Determine if the sidebar should be shown.
+// In blog posts, hide sidebar automatically.
+let showSidebar = !isBlogPost;
 ---
+
+<style>
+  /* Default color for light mode */
+  #sidebar-toggle-btn svg {
+    stroke: currentColor;
+  }
+
+  /* White color for dark mode */
+  :global(.dark) #sidebar-toggle-btn svg {
+    stroke: white;
+  }
+</style>
 
 <Layout title={title} banner={banner} description={description} lang={lang} setOGTypeArticle={setOGTypeArticle}>
 
@@ -61,13 +82,21 @@ const mainPanelTop = siteConfig.banner.enable
 
 <!-- Main content -->
 <div class="absolute w-full z-30 pointer-events-none" style={`top: ${mainPanelTop}`}>
-    <!-- The pointer-events-none here prevent blocking the click event of the TOC -->
     <div class="relative max-w-[var(--page-width)] mx-auto pointer-events-auto">
-        <div id="main-grid" class="transition duration-700 w-full left-0 right-0 grid grid-cols-[17.5rem_auto] grid-rows-[auto_1fr_auto] lg:grid-rows-[auto]
-    mx-auto gap-4 px-0 md:px-4"
+        <div
+          id="main-grid"
+          class:list={[
+            "transition duration-700 w-full grid gap-4",
+            isBlogPost
+              ? "grid-cols-1 justify-items-center"
+              : "grid-cols-[17.5rem_auto]", // Always start with sidebar visible for non-blog posts
+            className,
+          ]}
+          style="margin-top:2rem;"
+          data-blog-post={isBlogPost}
         >
-            <!-- Banner image credit -->
-            {hasBannerCredit && <a href={siteConfig.banner.credit.url} id="banner-credit" target="_blank" rel="noopener" aria-label="Visit image source"
+          <!-- Banner image credit -->
+          {hasBannerCredit && <a href={siteConfig.banner.credit.url} id="banner-credit" target="_blank" rel="noopener" aria-label="Visit image source"
                                    class:list={["group onload-animation transition-all absolute flex justify-center items-center rounded-full " +
                                    "px-3 right-4 -top-[3.25rem] bg-black/60 hover:bg-black/70 h-9", {"hover:pr-9 active:bg-black/80": hasBannerLink}]}
             >
@@ -79,24 +108,44 @@ const mainPanelTop = siteConfig.banner.enable
                 </Icon>
             </a>}
 
+          <!-- Only render sidebar if not a blog post -->
+          {!isBlogPost && (
+            <aside id="sidebar-container" class="transition-all duration-500">
+              <SideBar class="mb-4 row-start-2 row-end-3 col-span-2 lg:row-start-1 lg:row-end-2 lg:col-span-1 lg:max-w-[17.5rem] onload-animation" headings={headings}></SideBar>
+            </aside>
+          )}
 
-            <SideBar class="mb-4 row-start-2 row-end-3 col-span-2 lg:row-start-1 lg:row-end-2 lg:col-span-1 lg:max-w-[17.5rem] onload-animation" headings={headings}></SideBar>
+          <main id="swup-container" class="transition-swup-fade overflow-hidden w-full max-w-3xl">
+              <div id="content-wrapper" class="onload-animation">
+                  <!-- the overflow-hidden here prevent long text break the layout-->
+                  <!-- make id different from windows.swup global property -->
+                  <slot></slot>
+                  <div class="footer col-span-2 onload-animation hidden lg:block">
+                      <Footer></Footer>
+                  </div>
+              </div>
+          </main>
 
-            <main id="swup-container" class="transition-swup-fade col-span-2 lg:col-span-1 overflow-hidden">
-                <div id="content-wrapper" class="onload-animation">
-                    <!-- the overflow-hidden here prevent long text break the layout-->
-                    <!-- make id different from windows.swup global property -->
-                    <slot></slot>
-                    <div class="footer col-span-2 onload-animation hidden lg:block">
-                        <Footer></Footer>
-                    </div>
-                </div>
-            </main>
-
-            <div class="footer col-span-2 onload-animation block lg:hidden">
-                <Footer></Footer>
-            </div>
+          <div class="footer col-span-2 onload-animation block lg:hidden">
+              <Footer></Footer>
+          </div>
         </div>
+        
+        <!-- Only show toggle button for non-blog posts -->
+        {!isBlogPost && (
+          <button
+            id="sidebar-toggle-btn"
+            class="fixed z-40 top-20 left-2 md:left-4 bg-[var(--card-bg)] rounded-full shadow-lg p-2 transition hover:bg-[var(--btn-plain-bg-hover)] active:bg-[var(--btn-plain-bg-active)]"
+            aria-label="Toggle sidebar"
+          >
+            <svg id="sidebar-icon-show" class="w-6 h-6 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+            </svg>
+            <svg id="sidebar-icon-hide" class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16" />
+            </svg>
+          </button>
+        )}
 
         <BackToTop></BackToTop>
     </div>
@@ -123,3 +172,133 @@ const mainPanelTop = siteConfig.banner.enable
     </div>
 </div>
 </Layout>
+
+<style>
+/* Hide sidebar with smooth transition */
+#sidebar-container {
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+}
+</style>
+
+<script>
+  // Handle sidebar toggle functionality
+  document.addEventListener('DOMContentLoaded', () => {
+    const toggleBtn = document.getElementById('sidebar-toggle-btn');
+    const mainGrid = document.getElementById('main-grid');
+    const sidebar = document.getElementById('sidebar-container');
+    const showIcon = document.getElementById('sidebar-icon-show');
+    const hideIcon = document.getElementById('sidebar-icon-hide');
+    
+    // Check if this is a blog post
+    const isBlogPost = mainGrid?.getAttribute('data-blog-post') === 'true';
+    
+    // Function to update sidebar state
+    function updateSidebarState(visible) {
+      if (visible) {
+        mainGrid?.classList.remove('grid-cols-1', 'justify-items-center');
+        mainGrid?.classList.add('grid-cols-[17.5rem_auto]');
+        sidebar?.classList.remove('hidden');
+        showIcon?.classList.add('hidden');
+        hideIcon?.classList.remove('hidden');
+      } else {
+        mainGrid?.classList.remove('grid-cols-[17.5rem_auto]');
+        mainGrid?.classList.add('grid-cols-1', 'justify-items-center');
+        sidebar?.classList.add('hidden');
+        showIcon?.classList.remove('hidden');
+        hideIcon?.classList.add('hidden');
+      }
+      
+      // Save state to localStorage
+      localStorage.setItem('sidebar-visible', visible.toString());
+    }
+    
+    // For blog posts, always hide the sidebar
+    if (isBlogPost) {
+      updateSidebarState(false);
+    } else {
+      // For non-blog posts, check localStorage
+      const sidebarVisible = localStorage.getItem('sidebar-visible') !== 'false';
+      updateSidebarState(sidebarVisible);
+      
+      // Toggle sidebar when button is clicked
+      toggleBtn?.addEventListener('click', () => {
+        const isCurrentlyVisible = mainGrid?.classList.contains('grid-cols-[17.5rem_auto]');
+        updateSidebarState(!isCurrentlyVisible);
+      });
+    }
+  });
+
+  // Add listener for Swup page transitions to handle sidebar visibility
+  if (typeof window !== 'undefined') {
+    const handlePageTransition = () => {
+      // Check if the current URL is a blog post URL
+      const isBlogPostURL = window.location.pathname.includes('/posts/');
+      const mainGrid = document.getElementById('main-grid');
+      const isBlogPostAttr = mainGrid?.getAttribute('data-blog-post') === 'true';
+      const sidebar = document.getElementById('sidebar-container');
+      const showIcon = document.getElementById('sidebar-icon-show');
+      const hideIcon = document.getElementById('sidebar-icon-hide');
+      
+      if (!mainGrid || !sidebar) return;
+      
+      // If it's a blog post, hide the sidebar
+      if (isBlogPostURL || isBlogPostAttr) {
+        // Ensure correct class names
+        mainGrid.classList.remove('grid-cols-[17.5rem_auto]');
+        mainGrid.classList.add('grid-cols-1', 'justify-items-center');
+        sidebar.classList.add('hidden');
+        
+        if (showIcon && hideIcon) {
+          showIcon.classList.remove('hidden');
+          hideIcon.classList.add('hidden');
+        }
+        
+        // Update localStorage
+        localStorage.setItem('sidebar-visible', 'false');
+      } 
+      // If it's NOT a blog post (home, about, etc.), show the sidebar
+      else {
+        // Ensure correct class names for showing sidebar
+        mainGrid.classList.remove('grid-cols-1', 'justify-items-center');
+        mainGrid.classList.add('grid-cols-[17.5rem_auto]');
+        sidebar.classList.remove('hidden');
+        
+        if (showIcon && hideIcon) {
+          showIcon.classList.add('hidden');
+          hideIcon.classList.remove('hidden');
+        }
+        
+        // Update localStorage to remember this state
+        localStorage.setItem('sidebar-visible', 'true');
+      }
+    };
+
+    const setupSwupHooks = () => {
+      // Run on multiple Swup hooks to ensure it catches all transitions
+      window.swup.hooks.on('content:replace', handlePageTransition);
+      window.swup.hooks.on('page:view', handlePageTransition);
+      window.swup.hooks.on('animation:in:start', handlePageTransition);
+      
+      // Also run on navigation
+      window.swup.hooks.on('link:click', (event) => {
+        // Check if the target URL is a blog post
+        if (event?.delegateTarget?.href?.includes('/posts/')) {
+          // Pre-emptively update localStorage to ensure sidebar stays hidden
+          localStorage.setItem('sidebar-visible', 'false');
+        } else {
+          // Pre-emptively update localStorage to ensure sidebar shows on non-blog pages
+          localStorage.setItem('sidebar-visible', 'true');
+        }
+      });
+    };
+
+    if (window.swup) {
+      setupSwupHooks();
+    } else {
+      document.addEventListener('swup:enable', setupSwupHooks);
+    }
+    
+    // Run once more after a short delay to catch any missed transitions
+    setTimeout(handlePageTransition, 500);
+  }
+</script>
